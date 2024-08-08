@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChannelTests", "ChannelTests\ChannelTests.csproj", "{5C93E575-147E-4FF9-873E-8D316A058B82}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5C93E575-147E-4FF9-873E-8D316A058B82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C93E575-147E-4FF9-873E-8D316A058B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C93E575-147E-4FF9-873E-8D316A058B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C93E575-147E-4FF9-873E-8D316A058B82}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
