@@ -6,15 +6,6 @@ namespace ChannelTests;
 [ThreadingDiagnoser]
 public class ChannelSetupBenchmarks
 {
-    private static async Task Write(int workSize, int firstOpTimeConsumption, ChannelWriter<int> writer)
-    {
-        for (var i = 0; i < workSize; i++)
-        {
-            await Task.Delay(firstOpTimeConsumption);
-            await writer.WriteAsync(i);
-        }
-    }
-
     private static async Task ReadWrite(int secondOpTimeConsumption, ChannelReader<int> reader,
         ChannelWriter<int> writer)
     {
@@ -34,33 +25,44 @@ public class ChannelSetupBenchmarks
     }
 
     [Benchmark]
-    [Arguments(100, 1, 6, 6)]
-    [Arguments(1000, 1, 6, 6)]
+    [Arguments(100, 1, 6, 6, false)]
+    [Arguments(1000, 1, 6, 6, false)]
+    [Arguments(10000, 1, 6, 6, false)]
+    [Arguments(100, 1, 6, 6, true)]
+    [Arguments(1000, 1, 6, 6, true)]
+    [Arguments(10000, 1, 6, 6, true)]
     public async Task ProcessWithoutPartitioning(
         int workSize,
         int firstOpTimeConsumption,
         int secondOpTimeConsumption,
-        int thirdOpTimeConsumption)
+        int thirdOpTimeConsumption,
+        bool allowSynchronousContinuations)
     {
         var firstChannel = Channel.CreateUnbounded<int>(
             new UnboundedChannelOptions
             {
                 SingleWriter = true,
-                SingleReader = true
+                SingleReader = true,
+                AllowSynchronousContinuations = allowSynchronousContinuations
             });
 
         var secondChannel = Channel.CreateUnbounded<int>(
             new UnboundedChannelOptions
             {
                 SingleWriter = true,
-                SingleReader = true
+                SingleReader = true,
+                AllowSynchronousContinuations = allowSynchronousContinuations
             });
 
-        var writerTask = Write(workSize, firstOpTimeConsumption, firstChannel.Writer);
         var readerWriterTask = ReadWrite(secondOpTimeConsumption, firstChannel.Reader, secondChannel.Writer);
         var readerTask = Read(thirdOpTimeConsumption, secondChannel.Reader);
 
-        await writerTask;
+        for (var i = 0; i < workSize; i++)
+        {
+            await Task.Delay(firstOpTimeConsumption);
+            await firstChannel.Writer.WriteAsync(i);
+        }
+
         firstChannel.Writer.Complete();
 
         await readerWriterTask;
@@ -70,15 +72,20 @@ public class ChannelSetupBenchmarks
     }
 
     [Benchmark]
-    [Arguments(100, 4, 4, 1, 6, 6)]
-    [Arguments(1000, 4, 4, 1, 6, 6)]
+    [Arguments(100, 4, 4, 1, 6, 6, false)]
+    [Arguments(1000, 4, 4, 1, 6, 6, false)]
+    [Arguments(10000, 8, 8, 1, 6, 6, false)]
+    [Arguments(100, 4, 4, 1, 6, 6, true)]
+    [Arguments(1000, 4, 4, 1, 6, 6, true)]
+    [Arguments(10000, 8, 8, 1, 6, 6, true)]
     public async Task ProcessWithOneLevelPartitioning(
         int workSize,
         int partitionsCount,
         int readersCount,
         int firstOpTimeConsumption,
         int secondOpTimeConsumption,
-        int thirdOpTimeConsumption)
+        int thirdOpTimeConsumption,
+        bool allowSynchronousContinuations)
     {
         var partitionedChannels = new Dictionary<int, Channel<int>>();
         var readerWriterTasks = new List<Task>();
@@ -87,7 +94,8 @@ public class ChannelSetupBenchmarks
             new UnboundedChannelOptions
             {
                 SingleWriter = false,
-                SingleReader = false
+                SingleReader = false,
+                AllowSynchronousContinuations = allowSynchronousContinuations
             });
 
         var readerTasks = new List<Task>();
@@ -107,7 +115,8 @@ public class ChannelSetupBenchmarks
                     new UnboundedChannelOptions
                     {
                         SingleWriter = true,
-                        SingleReader = true
+                        SingleReader = true,
+                        AllowSynchronousContinuations = allowSynchronousContinuations
                     });
 
                 partitionedChannels[partitionKey] = value;
@@ -138,14 +147,19 @@ public class ChannelSetupBenchmarks
     }
 
     [Benchmark]
-    [Arguments(100, 4, 1, 6, 6)]
-    [Arguments(1000, 4, 1, 6, 6)]
+    [Arguments(100, 4, 1, 6, 6, false)]
+    [Arguments(1000, 4, 1, 6, 6, false)]
+    [Arguments(10000, 8, 1, 6, 6, false)]
+    [Arguments(100, 4, 1, 6, 6, true)]
+    [Arguments(1000, 4, 1, 6, 6, true)]
+    [Arguments(10000, 8, 1, 6, 6, true)]
     public async Task ProcessWithFullPartitioning(
         int workSize,
         int partitionsCount,
         int firstOpTimeConsumption,
         int secondOpTimeConsumption,
-        int thirdOpTimeConsumption)
+        int thirdOpTimeConsumption,
+        bool allowSynchronousContinuations)
     {
         var partitionedChannels = new Dictionary<int, (Channel<int> FirstChannel, Channel<int> SecondChannel)>();
         var readerWriterTasks = new List<Task>();
@@ -161,14 +175,16 @@ public class ChannelSetupBenchmarks
                     new UnboundedChannelOptions
                     {
                         SingleWriter = true,
-                        SingleReader = true
+                        SingleReader = true,
+                        AllowSynchronousContinuations = allowSynchronousContinuations
                     });
 
                 value.SecondChannel = Channel.CreateUnbounded<int>(
                     new UnboundedChannelOptions
                     {
                         SingleWriter = true,
-                        SingleReader = true
+                        SingleReader = true,
+                        AllowSynchronousContinuations = allowSynchronousContinuations
                     });
 
                 partitionedChannels[partitionKey] = value;
